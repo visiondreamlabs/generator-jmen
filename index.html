@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generátor českých jmen</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1f2937;
+        }
+
+        .container {
+            background: var(--glass);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; color: #111827; }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .radio-group {
+            display: flex;
+            background: #f3f4f6;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+        }
+
+        .radio-group label {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 0.4rem;
+            transition: 0.2s;
+        }
+
+        input[type="radio"] { display: none; }
+        
+        input[type="radio"]:checked + label {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .output-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.25rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+            text-align: center;
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-generate {
+            background: var(--primary);
+            color: white;
+            flex-grow: 1;
+        }
+
+        .btn-generate:hover { background: var(--primary-hover); }
+
+        .btn-copy {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-copy:hover { background: #059669; }
+
+        .copy-toast {
+            position: fixed;
+            bottom: 20px;
+            background: #374151;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Generátor jmen</h1>
+
+    <div class="controls">
+        <div class="radio-group">
+            <input type="radio" id="male" name="gender" value="male" checked>
+            <label for="male">Muž</label>
+            
+            <input type="radio" id="female" name="gender" value="female">
+            <label for="female">Žena</label>
+        </div>
+    </div>
+
+    <div class="output-group">
+        <input type="text" id="result" readonly placeholder="Klikněte na generovat">
+    </div>
+
+    <div class="buttons">
+        <button class="btn-generate" onclick="generateName()">Generovat nové jméno</button>
+        <button class="btn-copy" onclick="copyToClipboard()" title="Kopírovat">
+            📋
+        </button>
+    </div>
+</div>
+
+<div id="toast" class="copy-toast">Zkopírováno do schránky!</div>
+
+<script>
+    const data = {
+        maleNames: ["Jiří", "Jan", "Petr", "Josef", "Pavel", "Jaroslav", "Martin", "Miroslav", "Tomáš", "František", "Zdeněk", "Václav", "Michal", "Milan", "Karel", "Jakub", "Lukáš", "David", "Richard", "Marek", "Stanislav", "Libor", "Vojtěch", "Filip", "Adam"],
+        femaleNames: ["Marie", "Jana", "Eva", "Hana", "Anna", "Lenka", "Kateřina", "Věra", "Alena", "Petra", "Lucie", "Jaroslava", "Ludmila", "Helena", "Jitka", "Veronika", "Martina", "Jiřina", "Michaela", "Tereza", "Monika", "Zuzana", "Markéta", "Adéla", "Barbora"],
+        surnames: ["Novák", "Svoboda", "Novotný", "Dvořák", "Černý", "Procházka", "Kučera", "Veselý", "Horák", "Němec", "Marek", "Pospíšil", "Pokorný", "Hájek", "Král", "Jelínek", "Růžička", "Beneš", "Fiala", "Sedláček", "Doležal", "Zeman", "Kolář", "Krejčí", "Navrátil"]
+    };
+
+    function flexSurnames(surname, gender) {
+        if (gender === 'male') return surname;
+
+        // Základní logika přechylování pro nejčastější česká příjmení
+        if (surname.endsWith('ý')) {
+            return surname.slice(0, -1) + 'á';
+        } else if (surname.endsWith('í')) {
+            return surname; // např. Krejčí zůstává stejné
+        } else {
+            return surname + 'ová';
+        }
+    }
+
+    function generateName() {
+        const isMale = document.getElementById('male').checked;
+        const gender = isMale ? 'male' : 'female';
+        
+        const namesList = isMale ? data.maleNames : data.femaleNames;
+        
+        const randomName = namesList[Math.floor(Math.random() * namesList.length)];
+        const baseSurname = data.surnames[Math.floor(Math.random() * data.surnames.length)];
+        
+        const finalSurname = flexSurnames(baseSurname, gender);
+        
+        document.getElementById('result').value = `${randomName} ${finalSurname}`;
+    }
+
+    function copyToClipboard() {
+        const copyText = document.getElementById("result");
+        if (!copyText.value) return;
+
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+
+        const toast = document.getElementById("toast");
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 2000);
+    }
+
+    // Vygenerovat první jméno při načtení
+    window.onload = generateName;
+</script>
+
+</body>
+</html>
